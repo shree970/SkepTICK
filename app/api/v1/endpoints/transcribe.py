@@ -1,3 +1,25 @@
+'''
+TODO:
+1. check for english transcript availability in youtube api
+2. Add binary classifier for only using finance videos.
+    If false, return "This video is not about finance. Please provide a finance video."
+3. Store the video claims and transcriptions in MongoDB - 
+    Table User:
+    Age: int
+    Risk_profile: str
+    video_id: str
+    feedback: str/ int
+    client_information: dict
+    
+    Table VideoTranscription:
+    video_id: str
+    video_link: str
+    claims: dict
+    stock_names: list[str]
+    
+
+'''
+
 import json
 from pytube import extract
 from fastapi import APIRouter
@@ -12,7 +34,11 @@ from pydantic import BaseModel
 load_dotenv()
 
 router = APIRouter()
+'''
 
+
+
+'''
 
 class TranscribeRequest(BaseModel):
     video_url: str
@@ -84,4 +110,6 @@ def breakdown(request: TranscribeRequest):
     username, transcript = transcribe(request.video_url)
     claims, thesis = extract_entities(transcript)
     store_json(claims, thesis, username)
+    # store in MongoDB, 
+
     return {"claims": claims, "thesis": thesis}

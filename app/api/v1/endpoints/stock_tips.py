@@ -1,3 +1,20 @@
+'''
+1. Check for any stock names in DB, else no stock mentioned
+2. For the stock mentioned, fetch news articles from web
+3. Create summary of the news articles
+4. Output format
+    {
+        "stock_name": str,
+        "stock_info": str,
+        "news_summary": str,
+        "news_articles": list[str]
+    }
+    
+5. Store the output in MongoDB
+
+ 
+'''
+
 import json
 import os.path
 

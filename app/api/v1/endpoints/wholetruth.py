@@ -1,3 +1,12 @@
+'''
+TODO:
+1. Reading from mongoDB, videoTranscription
+2. Add output parser, verify the outputs
+3. Add the output to the database
+    wholetruth : dict['claim': str, 'counter_analysis': str]
+
+'''
+
 from fastapi import APIRouter
 from dotenv import load_dotenv
 from pydantic import BaseModel
@@ -30,7 +39,7 @@ def analyse_single_thesis(chat, thesis: str, age: int) -> str:
                     "You are talking to a person who is watching a financial influencer on youtube. You will receive part of transcript of the video where influencer is making a thesis about investment"
                     "You have to present counter-thesis to the person in brief."
                     "Take into account that the person is not an expert in finance and is not familiar with financial terms."
-                    "Take into account risk profile of person based on his age, here the age is {age}."
+                    "Take into account risk profile of person based on his age, here the age is {age}, risk profile is {risk_profile}."
                     "Assume younger people are more risk tolerant and older people are more risk averse."
                     "Dont add any information or disclaimers outside of core counter-analysis."
                 )
