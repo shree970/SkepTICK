@@ -1,31 +1,26 @@
 """here we define tools that are needed by an agent
 """
-from langchain.agents import load_tools
-from langchain.agents.tools import Tool
-from langchain_community.utilities import PythonREPL
-from pydantic import BaseModel, Field
-from langchain.chains import LLMMathChain
-from langchain_community.utilities import SerpAPIWrapper
-from langchain_community.tools import ShellTool
-from langchain_community.chat_models import ChatOpenAI
-from langchain.schema import (
-    HumanMessage,
-    SystemMessage
-)
 import json
-import requests
-from langchain.chains import LLMChain
-from langchain.prompts import PromptTemplate
+import os
 from typing import List
+
+import openai
+import requests
 import streamlit as st
 import yfinance as yf
-from yahooquery import Ticker
-import os
 from dotenv import load_dotenv
-import openai
-from openai import ChatCompletion
-from langchain.prompts import ChatPromptTemplate
+from langchain.agents import load_tools
+from langchain.agents.tools import Tool
+from langchain.chains import LLMChain, LLMMathChain
+from langchain.prompts import ChatPromptTemplate, PromptTemplate
+from langchain.schema import HumanMessage, SystemMessage
+from langchain_community.chat_models import ChatOpenAI
+from langchain_community.tools import ShellTool
+from langchain_community.utilities import PythonREPL, SerpAPIWrapper
 from langchain_core.messages import HumanMessage, SystemMessage
+from openai import ChatCompletion
+from pydantic import BaseModel, Field
+from yahooquery import Ticker
 
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")

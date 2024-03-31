@@ -11,17 +11,18 @@ import json
 
 from dotenv import load_dotenv
 from fastapi import APIRouter
-from langchain_community.chat_models import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
+from langchain_community.chat_models import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.prompts.chat import (ChatPromptTemplate,
+                                         HumanMessagePromptTemplate,
+                                         SystemMessagePromptTemplate)
 from pydantic import BaseModel
+
+from app.config.models import GPT4Config, MongoClient, WholeTruthRequest
 
 load_dotenv()
 router = APIRouter()
-
-
-class WholeTruthRequest(BaseModel):
-    age: int
 
 
 def read_DB(db_name: str) -> dict:
@@ -60,7 +61,12 @@ def wholetruth() -> dict:
     all_thesis = read_DB("thesis")
     analysis_dict = {}
 
-    chat = ChatOpenAI(temperature=0, model_name='gpt-4', request_timeout=120)
+    openai_config = GPT4Config()
+    chat = ChatOpenAI(
+        temperature=openai_config.temperature,
+        model_name=openai_config.model_name, 
+        request_timeout=openai_config.timeout
+        )
     for thesis in all_thesis["thesis_theoretical"]:
         thesis_str = list(thesis.values())[0]
         analysis = analyse_single_thesis(chat, thesis_str, age)

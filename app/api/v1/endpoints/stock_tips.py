@@ -17,20 +17,19 @@
 
 import json
 import os.path
-
-from fastapi import APIRouter
-from app.helper import financial_advisor
-from dotenv import load_dotenv
-import matplotlib.pyplot as plt
-from pydantic import BaseModel
-from app.agents.agent import ActionAgent
-from langchain.llms import OpenAI
-from langchain import PromptTemplate
 from pathlib import Path
-from langchain.callbacks.streaming_stdout_final_only import (
-    FinalStreamingStdOutCallbackHandler,
-)
 
+import matplotlib.pyplot as plt
+from dotenv import load_dotenv
+from fastapi import APIRouter
+from langchain import PromptTemplate
+from langchain.callbacks.streaming_stdout_final_only import \
+    FinalStreamingStdOutCallbackHandler
+from langchain_community.llms import OpenAI
+from pydantic import BaseModel
+
+from app.agents.agent import ActionAgent
+from app.helper import financial_advisor
 
 load_dotenv()
 router = APIRouter()

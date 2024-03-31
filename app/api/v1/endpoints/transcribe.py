@@ -116,7 +116,7 @@ def extract_claims(transcript):
     
     messages = [
         SystemMessage(content="""
-        You are a Financial Analyst. Your task is to identify the company stock and the context of claims made on the stock by a Financial Influencer. 
+        You are a honest Financial Analyst. Your task is to identify the company stock and the context of claims made on the stock by a Financial Influencer. 
         Please separate out the theoretical and quantitative analysis from the response. 
         Report the response in JSON format with keys company_name, claims, theoretical_analysis and quantitative_analysis.
         """),
