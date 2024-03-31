@@ -7,14 +7,14 @@ TODO:
 
 '''
 
-from fastapi import APIRouter
-from dotenv import load_dotenv
-from pydantic import BaseModel
-
-from langchain.prompts import ChatPromptTemplate
-from langchain.prompts.chat import SystemMessage, HumanMessagePromptTemplate
-from langchain.chat_models import ChatOpenAI
 import json
+
+from dotenv import load_dotenv
+from fastapi import APIRouter
+from langchain_community.chat_models import ChatOpenAI
+from langchain.prompts import ChatPromptTemplate
+from langchain_core.messages import HumanMessage, SystemMessage
+from pydantic import BaseModel
 
 load_dotenv()
 router = APIRouter()

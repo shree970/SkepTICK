@@ -2,11 +2,12 @@
 """
 from langchain.agents import load_tools
 from langchain.agents.tools import Tool
-from langchain.utilities import PythonREPL
+from langchain_community.utilities import PythonREPL
 from pydantic import BaseModel, Field
-from langchain import LLMMathChain, SerpAPIWrapper
-from langchain.tools import ShellTool
-from langchain.chat_models import ChatOpenAI
+from langchain.chains import LLMMathChain
+from langchain_community.utilities import SerpAPIWrapper
+from langchain_community.tools import ShellTool
+from langchain_community.chat_models import ChatOpenAI
 from langchain.schema import (
     HumanMessage,
     SystemMessage
@@ -24,8 +25,7 @@ from dotenv import load_dotenv
 import openai
 from openai import ChatCompletion
 from langchain.prompts import ChatPromptTemplate
-from langchain.prompts.chat import SystemMessage, HumanMessagePromptTemplate
-from langchain.chat_models import ChatOpenAI
+from langchain_core.messages import HumanMessage, SystemMessage
 
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
