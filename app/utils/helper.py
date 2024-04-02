@@ -1,13 +1,54 @@
 import os
 import requests
-import json
 import yfinance as yf
 from yahooquery import Ticker
 import openai
-from openai import ChatCompletion
 from dotenv import load_dotenv
+import pymongo
+import pymongo.collection
+from app.config.models import MongoClient, TranscribeResponse
+from langdetect import detect
+from pytube import YouTube, extract
+from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api._errors import NoTranscriptFound
+
+
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
+
+
+def mongo_client():
+    mongo_config = MongoClient()
+    client = pymongo.MongoClient(mongo_config.mongo_uri)
+    db = client.get_database(mongo_config.dbname)
+    collection = db.get_collection(mongo_config.collection_name)
+    return collection
+
+
+def transcribe(video_url: str) -> TranscribeResponse:
+    """
+    Given YouTube Video URL as input, returns the transcription
+    :param video_url:
+    :return: <str> transcribed text and author name
+    """
+    try:
+        youtube = YouTube(video_url)
+        description = youtube.description
+        title = youtube.title
+
+        transcript = ""
+        video_id = extract.video_id(video_url)
+        srt = YouTubeTranscriptApi.get_transcript(video_id, languages=["en"])
+
+        for line in srt:
+            transcript = transcript + " " + line["text"]
+
+        lang_code = detect(transcript)
+
+        return TranscribeResponse(video_id=video_id, lang_code=lang_code, title=title, description=description,
+                                  transcript=transcript)
+    except NoTranscriptFound:
+        return TranscribeResponse(video_id=video_id)
 
 
 def get_company_news(company_name):
@@ -47,7 +88,7 @@ def get_stock_evolution(company_name, period="1y"):
     data_string = hist.to_string()
 
     # Append the string to the "investment.txt" file
-    with open("app/assets/investment.txt", "a") as file:
+    with open("../assets/investment.txt", "a") as file:
         file.write(f"\nStock Evolution for {company_name}:\n")
         file.write(data_string)
         file.write("\n")
@@ -66,7 +107,7 @@ def get_financial_statements(ticker):
     valuation_measures = str(company.valuation_measures)  # This one might already be a dictionary or string
 
     # Write data to file
-    with open("app/assets/investment.txt", "a") as file:
+    with open("../assets/investment.txt", "a") as file:
         file.write("\nBalance Sheet\n")
         file.write(balance_sheet)
         file.write("\nCash Flow\n")

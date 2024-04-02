@@ -1,14 +1,8 @@
-import json
 import os.path
 
 from fastapi import APIRouter
-from app.helper import financial_advisor
 from dotenv import load_dotenv
-import matplotlib.pyplot as plt
 from pydantic import BaseModel
-from app.agents.agent import ActionAgent
-from langchain.llms import OpenAI
-from langchain import PromptTemplate
 from pathlib import Path
 import matplotlib.pyplot as plt
 import pandas as pd

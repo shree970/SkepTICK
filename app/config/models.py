@@ -26,5 +26,7 @@ class TranscribeResponse(BaseModel):
     transcript: str = Field(default=None)
 
 
-class WholeTruthRequest(BaseModel):
-    age: int
+class RegisterRequest(BaseModel):
+    username: str
+    amount: str
+    age: str

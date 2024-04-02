@@ -1,4 +1,4 @@
-'''
+"""
 1. Check for any stock names in DB, else no stock mentioned
 2. For the stock mentioned, fetch news articles from web
 3. Create summary of the news articles
@@ -9,11 +9,11 @@
         "news_summary": str,
         "news_articles": list[str]
     }
-    
+
 5. Store the output in MongoDB
 
- 
-'''
+
+"""
 
 import json
 import os.path
@@ -29,7 +29,7 @@ from langchain_community.llms import OpenAI
 from pydantic import BaseModel
 
 from app.agents.agent import ActionAgent
-from app.helper import financial_advisor
+from app.utils.helper import financial_advisor
 
 load_dotenv()
 router = APIRouter()

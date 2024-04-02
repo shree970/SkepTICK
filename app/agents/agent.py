@@ -9,7 +9,6 @@ from langchain.callbacks.base import BaseCallbackHandler
 from typing import Dict, Union, Any, List
 from langchain.schema import AgentAction
 import streamlit as st
-import time
 
 
 class MyCustomHandlerOne(BaseCallbackHandler):

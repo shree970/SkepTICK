@@ -1,75 +1,30 @@
-'''
+"""
 TODO:
 1. Reading from mongoDB, videoTranscription
 2. Add output parser, verify the outputs
 3. Add the output to the database
-    wholetruth : dict['claim': str, 'counter_analysis': str]
+    whole truth : dict['claim': str, 'counter_analysis': str]
 
-'''
+"""
 
-import json
-
-from dotenv import load_dotenv
 from fastapi import APIRouter
-from langchain.prompts import ChatPromptTemplate
-from langchain_community.chat_models import ChatOpenAI
-from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_core.prompts.chat import (ChatPromptTemplate,
-                                         HumanMessagePromptTemplate,
-                                         SystemMessagePromptTemplate)
-from pydantic import BaseModel
+from app.utils.prompt_helper import extract_whole_truth
+from app.utils.helper import mongo_client
 
-from app.config.models import GPT4Config, MongoClient, WholeTruthRequest
-
-load_dotenv()
 router = APIRouter()
 
 
-def read_DB(db_name: str) -> dict:
-    with open(f'app/database/{db_name}.json', 'r', encoding='utf-8') as f:
-        result = json.load(f)
-    return result
+@router.post("/whole_truth")
+async def whole_truth(age: int, risk_profile: str, video_id: str) -> list[str]:
+    collection = mongo_client()
+    response = collection.find_one({"video_id": video_id})
 
+    counter_analysis = []
+    for thesis in response["thesis"]:
+        analysis = extract_whole_truth(age, risk_profile, thesis)
+        counter_analysis.append(analysis)
 
-def analyse_single_thesis(chat, thesis: str, age: int) -> str:
-    template = ChatPromptTemplate.from_messages(
-        [
-            SystemMessage(
-                content=(
-                    "You are a financial advisor. Your job is to help people against misinformations about financial topics."
-                    "You are talking to a person who is watching a financial influencer on youtube. You will receive part of transcript of the video where influencer is making a thesis about investment"
-                    "You have to present counter-thesis to the person in brief."
-                    "Take into account that the person is not an expert in finance and is not familiar with financial terms."
-                    "Take into account risk profile of person based on his age, here the age is {age}, risk profile is {risk_profile}."
-                    "Assume younger people are more risk tolerant and older people are more risk averse."
-                    "Dont add any information or disclaimers outside of core counter-analysis."
-                )
-            ),
-            HumanMessagePromptTemplate.from_template("{text}"),
-        ]
-    )
+    new_field = {"$set": {"whole_truth": counter_analysis}}
+    collection.update_one({"video_id": video_id}, new_field)
 
-    response = chat(template.format_messages(text=thesis, age=age))
-
-    return response.content
-
-
-@router.get("/wholetruth")
-def wholetruth() -> dict:
-    age = 28
-    """Iterate over all theses in DB and generate counter-theses for each of them."""
-    all_thesis = read_DB("thesis")
-    analysis_dict = {}
-
-    openai_config = GPT4Config()
-    chat = ChatOpenAI(
-        temperature=openai_config.temperature,
-        model_name=openai_config.model_name, 
-        request_timeout=openai_config.timeout
-        )
-    for thesis in all_thesis["thesis_theoretical"]:
-        thesis_str = list(thesis.values())[0]
-        analysis = analyse_single_thesis(chat, thesis_str, age)
-        analysis_dict[list(thesis.keys())[0]] = thesis_str, analysis
-
-    return analysis_dict
+    return counter_analysis
