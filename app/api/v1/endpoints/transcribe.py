@@ -18,6 +18,7 @@ TODO:
     transcript: dict
     stock_names: list[str]
 """
+from functools import lru_cache
 from typing import Any
 from dotenv import load_dotenv
 from fastapi import APIRouter, HTTPException
@@ -31,9 +32,28 @@ load_dotenv()
 router = APIRouter()
 
 
+@lru_cache(maxsize=1)
+def cached_transcribe(video_url):
+    return transcribe(video_url)
+
+
+@router.post("/video_id/")
+async def get_video_id(request: TranscribeRequest):
+    try:
+        transcript_result = cached_transcribe(request.video_url)
+        if transcript_result.video_id is not None:
+            return transcript_result.video_id
+        else:
+            raise HTTPException(status_code=404, detail="Video ID not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/ValidityTest")
 async def validate_url(request: TranscribeRequest):
-    transcript_result = transcribe(request.video_url)
+    transcript_result = cached_transcribe(request.video_url)
+    print(transcript_result.title)
+    print(transcript_result.description)
     if transcript_result.lang_code != "en":
         response = """At present, we offer support for finance videos in English,
         with plans to introduce additional language options in the near future."""
