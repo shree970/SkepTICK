@@ -18,18 +18,20 @@ TODO:
     transcript: dict
     stock_names: list[str]
 """
+from app.utils.crud import MongoDB
 from functools import lru_cache
 from typing import Any
-from dotenv import load_dotenv
 from fastapi import APIRouter, HTTPException
 from bson.objectid import ObjectId
-from app.utils.helper import mongo_client, transcribe
+from app.utils.helper import transcribe
 from app.config.models import TranscribeRequest, TranscribeResponse
 from app.utils.prompt_helper import content_filter, extract_claims_and_thesis
-
-load_dotenv()
+from app.config.logs import MyLogger
 
 router = APIRouter()
+my_logger = MyLogger()
+logger = my_logger.get_logger()
+mongo = MongoDB()
 
 
 @lru_cache(maxsize=1)
@@ -52,8 +54,9 @@ async def get_video_id(request: TranscribeRequest):
 @router.post("/ValidityTest")
 async def validate_url(request: TranscribeRequest):
     transcript_result = cached_transcribe(request.video_url)
-    print(transcript_result.title)
-    print(transcript_result.description)
+    logger.info(f"Video Title: {transcript_result.title}")
+    logger.info(f"Video Description: {transcript_result.description}")
+
     if transcript_result.lang_code != "en":
         response = """At present, we offer support for finance videos in English,
         with plans to introduce additional language options in the near future."""
@@ -68,8 +71,9 @@ async def validate_url(request: TranscribeRequest):
 
 @router.post("/transcribe/index")
 async def check_db(video_id: str):
-    collection = mongo_client()
-    response = collection.find_one({"video_id": video_id})
+    logger.info(f"Video ID : {video_id}")
+    response = mongo.read(query={"video_id": video_id})
+    logger.info(f"Mongo DB response: {response}")
 
     if response:
         return response
@@ -79,17 +83,16 @@ async def check_db(video_id: str):
 
 @router.post("/transcribe/breakdown")
 async def breakdown(transcript: TranscribeResponse) -> dict[str, Any]:
-    collection = mongo_client()
-    stock_names, claims, thesis = extract_claims_and_thesis(transcript.transcript)
+    response = extract_claims_and_thesis(transcript.transcript)
 
     breakdown_results = {
         "_id": str(ObjectId()),
         "video_id": transcript.video_id,
         "transcript": transcript.transcript,
-        "stock_names": stock_names,
-        "claims": claims,
-        "thesis": thesis,
+        "stock_names": response["stock_names"],
+        "claims": response["claims"],
+        "thesis": response["theoretical_analysis"],
     }
-    collection.insert_one(breakdown_results)
+    mongo.create(breakdown_results)
 
     return breakdown_results

@@ -1,10 +1,14 @@
+import os
 from pydantic import BaseModel, Field
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 class MongoClient(BaseModel):
-    mongo_uri: str = Field(default="mongodb://localhost:27017/")
-    dbname: str = Field(default="local")
-    collection_name: str = Field(default="skeptic")
+    mongo_uri: str = Field(default=os.getenv('MONGO_URI'))
+    dbname: str = Field(default=os.getenv("MONGO_DBNAME"))
+    collection_name: str = Field(default=os.getenv("MONGO_COLLECTION"))
 
 
 class GPT4Config(BaseModel):

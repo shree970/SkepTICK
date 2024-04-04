@@ -5,7 +5,13 @@ from langchain_core.prompts.chat import (
     HumanMessagePromptTemplate,
     SystemMessagePromptTemplate,
 )
+from app.utils.output_parsers import parsers
 from app.config.models import GPT4Config
+from app.config.logs import MyLogger
+
+
+my_logger = MyLogger()
+logger = my_logger.get_logger()
 
 
 def content_filter(title, description):
@@ -27,7 +33,7 @@ def content_filter(title, description):
         You are provided with Youtube video title and description.
         Your task is to classify whether the title and description are related to any of the topics listed below
         [Finance, Financial Education, Financial Advice, Stock Markets, Stock Recommendation].
-        Response should be strictly limited to either True or False. Do not include anything else in the response.
+        Response should be strictly limited to either YES or NO. Do not include anything else in the response.
         """
     )
     system_message_prompt = SystemMessagePromptTemplate.from_template(template)
@@ -36,8 +42,12 @@ def content_filter(title, description):
 
     chat_prompt = ChatPromptTemplate.from_messages([system_message_prompt, human_message_prompt])
     prompt = chat_prompt.format_prompt(title=title, description=description).to_messages()
+    logger.debug(f"Content Filter Prompt - {prompt}")
     response = chat(prompt)
-    return eval(response.content)
+    logger.debug(f"Content Filter LLM response - {response}")
+    parsed_response = parsers(response.content, dtype="boolean")
+    logger.debug(f"Parsed Response - {parsed_response}")
+    return parsed_response
 
 
 def extract_claims_and_thesis(transcript):
@@ -58,8 +68,8 @@ def extract_claims_and_thesis(transcript):
         SystemMessage(content="""
         You are a honest Financial Analyst. 
         You are provided with a youtube video transcript of a Financial Influencer. 
-        Your first task is to identify and extract unique stock names in the transcript.
-        If no stock names are found, return response as None.
+        Your first task is to identify and extract unique company names in the transcript.
+        If no company names are found, return response as None.
         Second task is to extract claims made by the Financial Influencer and generate theoretical thesis for each claim.
         Report the response in JSON format as mentioned below with keys stock_names, claims, theoretical_analysis.
         
@@ -69,12 +79,11 @@ def extract_claims_and_thesis(transcript):
         HumanMessage(content=transcript)
     ]
     response = chat(messages)
-    formatted_output = eval(response.content)
-    company_names = formatted_output["stock_names"]
-    claims = formatted_output["claims"]
-    thesis = formatted_output["theoretical_analysis"]
+    logger.info(f"Claims Extract LLM response - {response.content}")
+    # parsed_output = parsers(response.content, dtype="dict")
+    # logger.info(f"Parsed Response - {parsed_output}")
 
-    return company_names, claims, thesis
+    return eval(response.content)
 
 
 def extract_whole_truth(age: int, risk_profile: str, thesis: str, ) -> str:
@@ -109,5 +118,7 @@ def extract_whole_truth(age: int, risk_profile: str, thesis: str, ) -> str:
     )
 
     response = chat(template.format_messages(text=thesis, age=age, risk_profile=risk_profile))
-
+    logger.info(f"Whole truth LLM response - {response.content}")
+    # parsed_output = parsers(response.content, dtype="list")
+    # logger.info(f"Parsed Response - {parsed_output}")
     return response.content
