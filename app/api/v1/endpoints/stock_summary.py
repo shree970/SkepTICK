@@ -9,9 +9,15 @@ from langchain.chains.summarize import load_summarize_chain
 from langchain.prompts import PromptTemplate
 from pydantic import BaseModel
 from typing import Optional
+import concurrent.futures
 
 from fastapi import APIRouter
 from dotenv import load_dotenv
+
+from app.config.logs import MyLogger
+
+my_logger = MyLogger()
+logger = my_logger.get_logger()
 
 load_dotenv()
 router = APIRouter()
@@ -47,7 +53,7 @@ def generate_summary_openai(
     """Generate summary using OpenAI model"""
     summary = f"Unable to fetch summary for: {stock_name}"
     try:
-        print(f"Summarizing news for : {stock_name}")
+        logger.info(f"stock_summary api: Summarizing news for : {stock_name}")
         llm = ChatOpenAI(
             temperature=temperature, model_name="gpt-4", request_timeout=60
         )
@@ -61,7 +67,7 @@ def generate_summary_openai(
         )
         summary = chain.run(docs)
     except Exception as e:
-        print(f"Error: {e}")
+        logger.error(f"stock_summary api: Error while Summarizing: {e}")
     output = SummarizerOutput(summary=summary, token_count=1)
     return output
 
@@ -70,17 +76,17 @@ def get_bing_result(stock_name, no_news) -> list:
     """Get Bing search results"""
     bing_result = []
     try:
-        print(f"Getting bing results for : {stock_name}")
+        logger.info(f"stock_summary api: Getting bing results for : {stock_name}")
         search = BingSearchAPIWrapper()
         bing_result = search.results(f"{stock_name} stock", no_news)
     except Exception as e:
-        print(e)
+        logger.error(f"stock_summary api: Error while fetching bing results: {e}")
     return bing_result
 
 
 def scrap_webpage(web_url) -> str:
     """Scrape webpage content"""
-    print(f"scraping webpage: {web_url}")
+    logger.info(f"stock_summary api: scraping webpage: {web_url}")
     if "www.nseindia.com" in web_url or "www.bseindia.com" in web_url:
         return ""
     else:
@@ -101,19 +107,35 @@ def scrap_webpage(web_url) -> str:
                     .replace("\r", "")
                 )
 
-        except urllib.error.URLError as e:
-            print(f"Error fetching content: {e}")
+        except Exception as e:
+            logger.error(f"stock_summary api: Error while in scrap_webpage: {e}")
         return all_content
 
 
 def collect_news(bing_result) -> str:
     """Collect news content from Bing search results"""
     stock_news = ""
-    for page in bing_result:
-        stock_news += "Different article:  "
-        stock_news += scrap_webpage(page["link"])
-    print("All news gathered")
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = [executor.submit(scrap_webpage, page["link"]) for page in bing_result]
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                result = future.result()
+                stock_news += "Different article:  "
+                stock_news += result
+            except Exception as e:
+                logger.error(f"stock_summary api: Error while collecting news: {e}")
+    logger.info("stock_summary api: All news gathered")
     return stock_news
+
+
+# def collect_news(bing_result) -> str:
+#     """Collect news content from Bing search results"""
+#     stock_news = ""
+#     for page in bing_result:
+#         stock_news += "Different article:  "
+#         stock_news += scrap_webpage(page["link"])
+#     logger.info("stock_summary api: All news gathered")
+#     return stock_news
 
 
 @router.post("/stock_summary/{stock_name}")
@@ -135,4 +157,5 @@ async def get_stock_news(request: SummarizerRequest) -> dict:
 
         return {"stock_name": stock_name, "stock_summary": stock_summ}
     except Exception as e:
+        logger.error(f"Error occurred in stock_summary api endpoit: {e}")
         return {"error": str(e)}
