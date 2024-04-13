@@ -114,4 +114,5 @@ async def breakdown(video_id: str) -> JSONResponse:
         return JSONResponse(content=response, status_code=200)
 
     except Exception as exp:
-        raise HTTPException(status_code=400, detail=str(exp))
+        logger.error(f"An error occurred: {exp}")
+        raise HTTPException(status_code=500, detail=str(exp))
