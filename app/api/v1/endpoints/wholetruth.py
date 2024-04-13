@@ -1,13 +1,5 @@
-"""
-TODO:
-1. Reading from mongoDB, videoTranscription
-2. Add output parser, verify the outputs
-3. Add the output to the database
-    whole truth : dict['claim': str, 'counter_analysis': str]
-
-"""
-
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import JSONResponse
 from app.utils.prompt_helper import extract_whole_truth
 from app.utils.crud import MongoDB
 from app.config.logs import MyLogger
@@ -20,20 +12,31 @@ mongo = MongoDB()
 
 
 @router.post("/whole_truth")
-async def whole_truth(age: int, risk_profile: str, video_id: str) -> list[str]:
-    
-    # remove sqare brackets in response
-    # add exception
-    response = mongo.read({"video_id": video_id})
-    # check for video_id, and Risk_profile, and return wholeTruth
-    # add video ID in response
-    
-    counter_analysis = []
-    for thesis in response["thesis"]:
-        analysis = extract_whole_truth(age, risk_profile, thesis)
-        counter_analysis.append(analysis)
+async def whole_truth(video_id: str, risk_profile: str) -> JSONResponse:
+    """
+    remove sqare brackets in response
+    add exception
+    check for video_id, and Risk_profile, and return wholeTruth
+    add video ID in response
+    :param video_id:
+    :param risk_profile:
+    :return:
+    """
 
-    new_field = {"whole_truth": counter_analysis}
-    mongo.update(query={"video_id": video_id}, new_data=new_field)
+    try:
+        fetch_db = mongo.read({"video_id": video_id})
+        logger.info(f"Fetched the video metadata from MongoDB: {fetch_db}")
 
-    return counter_analysis
+        counter_analysis = []
+        for thesis in fetch_db["thesis"]:
+            analysis = extract_whole_truth(risk_profile, thesis)
+            counter_analysis.append(analysis)
+
+        new_field = {"whole_truth": counter_analysis}
+        mongo.update(query={"video_id": video_id}, new_data=new_field)
+
+        response = {"video_id": video_id, "whole_truth": counter_analysis}
+        return JSONResponse(content=response, status_code=200)
+
+    except Exception as exp:
+        raise HTTPException(status_code=400, detail=str(exp))

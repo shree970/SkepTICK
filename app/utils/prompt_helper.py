@@ -74,7 +74,7 @@ def extract_claims_and_thesis(transcript):
         Report the response in JSON format as mentioned below with keys stock_names, claims, theoretical_analysis.
         
         Output format:
-        {'stock_names': [], 'claims': ['claim 1', 'claim 2', 'claim 3'], 'theoretical_analysis': ['thesis 1', 'thesis 2']}
+        {'stock_names': [], 'claims': ['<claim 1>', '<claim 2>'], 'theoretical_analysis': ['<thesis 1>', '<thesis 2>']}
         """),
         HumanMessage(content=transcript)
     ]
@@ -86,7 +86,7 @@ def extract_claims_and_thesis(transcript):
     return eval(response.content)
 
 
-def extract_whole_truth(age: int, risk_profile: str, thesis: str, ) -> str:
+def extract_whole_truth(risk_profile: str, thesis: str, ) -> str:
     openai_config = GPT4Config()
     chat = ChatOpenAI(
         temperature=openai_config.temperature,
@@ -103,21 +103,21 @@ def extract_whole_truth(age: int, risk_profile: str, thesis: str, ) -> str:
             You will be provided with a segment of the video transcript where the Financial Influencer presents an investment thesis.
             Your role is to present a counter-thesis succinctly to the individual.
             Consider that the individual is not well-versed in finance and may not be familiar with financial terminology.
-            Take into account the individual's risk profile based on their age, which is {age}, and their risk tolerance, categorized as {risk_profile}.
+            Take into account the individual's risk profile.
             Assume that younger individuals tend to be more tolerant of risk, while older individuals tend to be more risk-averse.
             Do not include any extraneous information or disclaimers beyond the core counter-analysis.
             Avoid directly stating phrases similar to the following:
             "It's advisable to consult with a financial advisor to ensure your investment decisions align with your financial goals and risk tolerance."
             People trust your expertise as a Financial Advisor. Be mindful not to repeat similar text in your response.
             Response format:
-            [<counter analysis>]
+            [<counter analysis1>, <counter analysis2>, <counter analysis3>]
             """)
                           ),
-            HumanMessagePromptTemplate.from_template("{text}"),
+            HumanMessagePromptTemplate.from_template("{text}, {risk_profile}"),
         ]
     )
 
-    response = chat(template.format_messages(text=thesis, age=age, risk_profile=risk_profile))
+    response = chat(template.format_messages(text=thesis, risk_profile=risk_profile))
     logger.info(f"Whole truth LLM response - {response.content}")
     # parsed_output = parsers(response.content, dtype="list")
     # logger.info(f"Parsed Response - {parsed_output}")

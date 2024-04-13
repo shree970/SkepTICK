@@ -5,7 +5,6 @@ from fastapi.responses import JSONResponse
 
 from app.api.root import root_router
 from app.api.v1.api import v1_router
-from app.config.models import RegisterRequest
 
 
 app = FastAPI()
@@ -20,12 +19,6 @@ app.add_middleware(
     allow_methods=["*"],  # Allows all methods
     allow_headers=["*"],
 )
-
-
-@app.post("/register")
-async def register(registerRequest: RegisterRequest):
-    print(registerRequest)
-    return registerRequest
 
 
 @app.exception_handler(RequestValidationError)

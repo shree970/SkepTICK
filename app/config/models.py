@@ -18,19 +18,9 @@ class GPT4Config(BaseModel):
     timeout: int = Field(default=120)
 
 
-class TranscribeRequest(BaseModel):
-    video_url: str
-
-
 class TranscribeResponse(BaseModel):
     video_id: str
     lang_code: str = Field(default=None)
     title: str = Field(default=None)
     description: str = Field(default=None)
     transcript: str = Field(default=None)
-
-
-class RegisterRequest(BaseModel):
-    username: str
-    amount: str
-    age: str

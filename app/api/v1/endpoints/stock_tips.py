@@ -29,7 +29,6 @@ from langchain_community.llms import OpenAI
 from pydantic import BaseModel
 
 from app.agents.agent import ActionAgent
-from app.utils.helper import financial_advisor
 
 load_dotenv()
 router = APIRouter()
@@ -83,6 +82,6 @@ def stock_tips():
     investment_thesis = action_agent.run(prompt)
     print("OUTPUT FROM AGENT", investment_thesis)
 
-    history = financial_advisor(company_name)
+    # history = financial_advisor(company_name)
     stock_chart = create_graph(history, company_name)
     return stock_chart, investment_thesis
