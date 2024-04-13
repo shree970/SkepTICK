@@ -21,8 +21,13 @@ mongo = MongoDB()
 
 @router.post("/whole_truth")
 async def whole_truth(age: int, risk_profile: str, video_id: str) -> list[str]:
+    
+    # remove sqare brackets in response
+    # add exception
     response = mongo.read({"video_id": video_id})
-
+    # check for video_id, and Risk_profile, and return wholeTruth
+    # add video ID in response
+    
     counter_analysis = []
     for thesis in response["thesis"]:
         analysis = extract_whole_truth(age, risk_profile, thesis)

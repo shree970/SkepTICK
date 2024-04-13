@@ -41,6 +41,13 @@ def cached_transcribe(video_url):
 
 @router.post("/video_id/")
 async def get_video_id(request: TranscribeRequest):
+
+    # check from DB, if already presnt URL,
+    # if_yes - return {video_id,"isFinancial":bool,"isEnglsih":bool}
+    # if_no - /ValidityTest
+
+ 
+
     try:
         transcript_result = cached_transcribe(request.video_url)
         if transcript_result.video_id is not None:
@@ -51,12 +58,21 @@ async def get_video_id(request: TranscribeRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+
+
 @router.post("/ValidityTest")
 async def validate_url(request: TranscribeRequest):
+    # extract title, description, langaugaeg_code
+    # Check validity
+    # get the validaty resutls of englsh, finance in DB, 
+    # if both true with transcript 
+    # Store in mongo
+
     transcript_result = cached_transcribe(request.video_url)
     logger.info(f"Video Title: {transcript_result.title}")
     logger.info(f"Video Description: {transcript_result.description}")
 
+    # response is JSON with bool
     if transcript_result.lang_code != "en":
         response = """At present, we offer support for finance videos in English,
         with plans to introduce additional language options in the near future."""
@@ -83,8 +99,13 @@ async def check_db(video_id: str):
 
 @router.post("/transcribe/breakdown")
 async def breakdown(transcript: TranscribeResponse) -> dict[str, Any]:
+    # get video id, fetch transcript from DB, extract claims and thesis, stock names
+    # return vido_id,thesis,stock_names with JSONResponse 200
+    # exception handling, with JSONResponse 400
+
     response = extract_claims_and_thesis(transcript.transcript)
 
+    #change str to objectID for _id
     breakdown_results = {
         "_id": str(ObjectId()),
         "video_id": transcript.video_id,
