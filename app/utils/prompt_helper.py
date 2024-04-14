@@ -24,27 +24,29 @@ def content_filter(title, description):
     chat = ChatOpenAI(
         temperature=openai_config.temperature,
         model_name=openai_config.model_name,
-        request_timeout=openai_config.timeout
+        max_tokens=3,
+        request_timeout=openai_config.timeout,
     )
 
-    template = (
-        """
+    template = """
         You are a honest assistant. 
         You are provided with Youtube video title and description.
         Your task is to classify whether the title and description are related to any of the topics listed below
         [Finance, Financial Education, Financial Advice, Stock Markets, Stock Recommendation].
         Response should be strictly limited to either YES or NO. Do not include anything else in the response.
         """
-    )
     system_message_prompt = SystemMessagePromptTemplate.from_template(template)
     human_template = "{title}, {description}"
     human_message_prompt = HumanMessagePromptTemplate.from_template(human_template)
 
-    chat_prompt = ChatPromptTemplate.from_messages([system_message_prompt, human_message_prompt])
-    prompt = chat_prompt.format_prompt(title=title, description=description).to_messages()
+    chat_prompt = ChatPromptTemplate.from_messages(
+        [system_message_prompt, human_message_prompt]
+    )
+    prompt = chat_prompt.format_prompt(
+        title=title, description=description
+    ).to_messages()
     logger.debug(f"Content Filter Prompt - {prompt}")
     response = chat(prompt)
-    logger.debug(f"Content Filter LLM response - {response}")
     parsed_response = parsers(response.content, dtype="boolean")
     logger.debug(f"Parsed Response - {parsed_response}")
     return parsed_response
@@ -61,11 +63,13 @@ def extract_claims_and_thesis(transcript):
     chat = ChatOpenAI(
         temperature=openai_config.temperature,
         model_name=openai_config.model_name,
-        request_timeout=openai_config.timeout
+        max_tokens=openai_config.max_tokens,
+        request_timeout=openai_config.timeout,
     )
 
     messages = [
-        SystemMessage(content="""
+        SystemMessage(
+            content="""
         You are a honest Financial Analyst. 
         You are provided with a youtube video transcript of a Financial Influencer. 
         Your first task is to identify and extract unique company names in the transcript.
@@ -74,51 +78,45 @@ def extract_claims_and_thesis(transcript):
         Report the response in JSON format as mentioned below with keys stock_names, claims, theoretical_analysis.
         
         Output format:
-        {'stock_names': [], 'claims': ['claim 1', 'claim 2', 'claim 3'], 'theoretical_analysis': ['thesis 1', 'thesis 2']}
-        """),
-        HumanMessage(content=transcript)
+        {'stock_names': [], 'claims': ['<claim 1>', '<claim 2>'], 'theoretical_analysis': ['<thesis 1>', '<thesis 2>']}
+        """
+        ),
+        HumanMessage(content=transcript),
     ]
     response = chat(messages)
     logger.info(f"Claims Extract LLM response - {response.content}")
-    # parsed_output = parsers(response.content, dtype="dict")
-    # logger.info(f"Parsed Response - {parsed_output}")
-
     return eval(response.content)
 
 
-def extract_whole_truth(age: int, risk_profile: str, thesis: str, ) -> str:
+def extract_whole_truth(risk_profile: str, thesis: str) -> str:
     openai_config = GPT4Config()
     chat = ChatOpenAI(
         temperature=openai_config.temperature,
         model_name=openai_config.model_name,
+        max_tokens=128,
         request_timeout=openai_config.timeout,
     )
 
     template = ChatPromptTemplate.from_messages(
         [
-            SystemMessage(content=("""
-            You are a dedicated Financial Advisor.
+            SystemMessagePromptTemplate.from_template(
+                f"""
+            You are a dedicated, honest, helpful and truthful Financial Advisor.
             Your task is to provide reliable guidance to individuals combating misinformation regarding financial matters.
             You are responding to an individual who is watching a YouTube video featuring a Financial Influencer.
             You will be provided with a segment of the video transcript where the Financial Influencer presents an investment thesis.
-            Your role is to present a counter-thesis succinctly to the individual.
+            Your task is to present a counter-thesis succinctly to the individual based on his risk profile - {risk_profile}.
             Consider that the individual is not well-versed in finance and may not be familiar with financial terminology.
-            Take into account the individual's risk profile based on their age, which is {age}, and their risk tolerance, categorized as {risk_profile}.
-            Assume that younger individuals tend to be more tolerant of risk, while older individuals tend to be more risk-averse.
             Do not include any extraneous information or disclaimers beyond the core counter-analysis.
             Avoid directly stating phrases similar to the following:
             "It's advisable to consult with a financial advisor to ensure your investment decisions align with your financial goals and risk tolerance."
             People trust your expertise as a Financial Advisor. Be mindful not to repeat similar text in your response.
-            Response format:
-            [<counter analysis>]
-            """)
-                          ),
+            """
+            ),
             HumanMessagePromptTemplate.from_template("{text}"),
         ]
     )
 
-    response = chat(template.format_messages(text=thesis, age=age, risk_profile=risk_profile))
+    response = chat(template.format_messages(text=thesis, risk_profile=risk_profile))
     logger.info(f"Whole truth LLM response - {response.content}")
-    # parsed_output = parsers(response.content, dtype="list")
-    # logger.info(f"Parsed Response - {parsed_output}")
     return response.content

@@ -16,13 +16,13 @@ def main():
             investment_thesis, hist = financial_advisor(company_name)
 
             # Select 'Open' and 'Close' columns from the hist dataframe
-            hist_selected = hist[['Open', 'Close']]
+            hist_selected = hist[["Open", "Close"]]
 
             # Create a new figure in matplotlib
             fig, ax = plt.subplots()
 
             # Plot the selected data
-            hist_selected.plot(kind='line', ax=ax)
+            hist_selected.plot(kind="line", ax=ax)
 
             # Set the title and labels
             ax.set_title(f"{company_name} Stock Price")

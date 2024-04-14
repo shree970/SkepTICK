@@ -1,17 +1,9 @@
-"""
-TODO:
-1. Reading from mongoDB, videoTranscription
-2. Add output parser, verify the outputs
-3. Add the output to the database
-    whole truth : dict['claim': str, 'counter_analysis': str]
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import JSONResponse
 
-"""
-
-from fastapi import APIRouter
-from app.utils.prompt_helper import extract_whole_truth
-from app.utils.crud import MongoDB
 from app.config.logs import MyLogger
-
+from app.utils.crud import MongoDB
+from app.utils.prompt_helper import extract_whole_truth
 
 router = APIRouter()
 my_logger = MyLogger()
@@ -20,20 +12,44 @@ mongo = MongoDB()
 
 
 @router.post("/whole_truth")
-async def whole_truth(age: int, risk_profile: str, video_id: str) -> list[str]:
-    
-    # remove sqare brackets in response
-    # add exception
-    response = mongo.read({"video_id": video_id})
-    # check for video_id, and Risk_profile, and return wholeTruth
-    # add video ID in response
-    
-    counter_analysis = []
-    for thesis in response["thesis"]:
-        analysis = extract_whole_truth(age, risk_profile, thesis)
-        counter_analysis.append(analysis)
+async def whole_truth(video_id: str, risk_profile: str) -> JSONResponse:
+    """
+    check for video_id, and Risk_profile, and return wholeTruth
+    :param video_id:
+    :param risk_profile:
+    :return:
+    """
 
-    new_field = {"whole_truth": counter_analysis}
-    mongo.update(query={"video_id": video_id}, new_data=new_field)
+    try:
+        fetch_db = mongo.read({"video_id": video_id})
+        logger.info(
+            f"Fetched the video metadata from MongoDB: {fetch_db.get('video_id')}"
+        )
+        if fetch_db.get("whole_truth") and fetch_db.get("whole_truth").get(
+            risk_profile
+        ):
+            response = {
+                "video_id": video_id,
+                "whole_truth": fetch_db.get("whole_truth")[risk_profile],
+            }
+            return JSONResponse(content=response, status_code=200)
 
-    return counter_analysis
+        counter_analysis = []
+        for thesis in fetch_db["thesis"]:
+            analysis = extract_whole_truth(risk_profile, thesis)
+            counter_analysis.append(analysis)
+
+        if fetch_db.get("whole_truth"):
+            fetch_db["whole_truth"][risk_profile] = counter_analysis
+            mongo.update(query={"video_id": video_id}, new_data=fetch_db)
+        else:
+            output = {f"{risk_profile}": counter_analysis}
+            new_field = {"whole_truth": output}
+            mongo.update(query={"video_id": video_id}, new_data=new_field)
+
+        response = {"video_id": video_id, "whole_truth": counter_analysis}
+        return JSONResponse(content=response, status_code=200)
+
+    except Exception as exp:
+        logger.error(f"An error occurred: {exp}")
+        raise HTTPException(status_code=500, detail=str(exp))
