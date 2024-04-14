@@ -4,3 +4,5 @@ venv/
 .embold
 __pycache__
 .DS_Store
+data/db
+notebooks/ProgramFC
