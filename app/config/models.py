@@ -6,7 +6,7 @@ load_dotenv()
 
 
 class MongoClient(BaseModel):
-    mongo_uri: str = Field(default=os.getenv('MONGO_URI'))
+    mongo_uri: str = Field(default=os.getenv("MONGO_URI"))
     dbname: str = Field(default=os.getenv("MONGO_DBNAME"))
     collection_name: str = Field(default=os.getenv("MONGO_COLLECTION"))
 

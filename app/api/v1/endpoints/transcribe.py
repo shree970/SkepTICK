@@ -1,11 +1,12 @@
-from app.utils.crud import MongoDB
+from bson.objectid import ObjectId
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
-from bson.objectid import ObjectId
 from pytube import extract
+
+from app.config.logs import MyLogger
+from app.utils.crud import MongoDB
 from app.utils.helper import transcribe
 from app.utils.prompt_helper import content_filter, extract_claims_and_thesis
-from app.config.logs import MyLogger
 
 router = APIRouter()
 my_logger = MyLogger()
@@ -32,7 +33,7 @@ async def get_video_id(video_url: str) -> JSONResponse:
             response = {
                 "video_id": video_id,
                 "isFinancial": check_db.get("isFinancial", False),
-                "isEnglish": check_db.get("isEnglish", False)
+                "isEnglish": check_db.get("isEnglish", False),
             }
             return JSONResponse(content=response, status_code=200)
         else:
@@ -57,14 +58,20 @@ async def validate_url(video_url: str) -> JSONResponse:
         transcribe_response = transcribe(video_url)
         logger.info(f"Video Title: {transcribe_response.title}")
         logger.info(f"Video Description: {transcribe_response.description}")
-        output = content_filter(transcribe_response.title, transcribe_response.description)
+        output = content_filter(
+            transcribe_response.title, transcribe_response.description
+        )
 
         if transcribe_response.lang_code != "en":
             response = {"video_id": transcribe_response.video_id, "isEnglish": False}
             return JSONResponse(content=response, status_code=200)
 
         elif not output:
-            response = {"video_id": transcribe_response.video_id, "isEnglish": True, "isFinancial": output}
+            response = {
+                "video_id": transcribe_response.video_id,
+                "isEnglish": True,
+                "isFinancial": output,
+            }
             return JSONResponse(content=response, status_code=200)
 
         else:
@@ -76,10 +83,14 @@ async def validate_url(video_url: str) -> JSONResponse:
                 "isFinancial": output,
                 "title": transcribe_response.title,
                 "description": transcribe_response.description,
-                "transcript": transcribe_response.transcript
+                "transcript": transcribe_response.transcript,
             }
             mongo.create(store_in_db)
-            response = {"video_id": transcribe_response.video_id, "isEnglish": True, "isFinancial": output}
+            response = {
+                "video_id": transcribe_response.video_id,
+                "isEnglish": True,
+                "isFinancial": output,
+            }
             return JSONResponse(content=response, status_code=200)
     except Exception as exp:
         logger.error(f"An error occurred: {exp}")
@@ -109,7 +120,7 @@ async def breakdown(video_id: str) -> JSONResponse:
         response = {
             "video_id": video_id,
             "thesis": extract_response["thesis"],
-            "stock_names": extract_response["stock_names"]
+            "stock_names": extract_response["stock_names"],
         }
         return JSONResponse(content=response, status_code=200)
 
