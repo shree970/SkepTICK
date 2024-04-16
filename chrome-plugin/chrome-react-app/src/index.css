@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+#popup-body {
+    width: 40em;
+    height: 40em;
+}
+
+.text-outline {
+text-shadow: 
+    -1px -1px 0 #000000,
+    1px -1px 0 #000000,
+    -1px 1px 0 #000000,
+    1px 1px 0 #000000;
+}
+
+@keyframes jump {
+    0%, 20%, 80%, 100% {
+        transform: translateY(0);
+    }
+    40% {
+        transform: translateY(-0.5rem);
+    }
+    60% {
+        transform: translateY(-0.25rem);
+    }
+}
+  
+  

@@ -6,3 +6,19 @@ __pycache__
 .DS_Store
 data/db
 notebooks/ProgramFC
+
+# dependencies
+chrome-plugin/*/node_modules
+chrome-plugin/*/.pnp
+chrome-plugin/*/.pnp.js
+
+# testing
+chrome-plugin/*/coverage
+
+# production
+chrome-plugin/*/build
+
+# misc
+chrome-plugin/*/npm-debug.log*
+chrome-plugin/*/yarn-debug.log*
+chrome-plugin/*/yarn-error.log*
