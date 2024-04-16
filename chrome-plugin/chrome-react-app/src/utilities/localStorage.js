@@ -1,7 +1,10 @@
 /* global chrome */
 
-function saveToStorage(key, value, callback) {
-  const maxKeys = process.env.REACT_APP_STORAGE_LIMIT;
+const prefix = 'yId-'; 
+
+function saveToStorage(youtubeId, value, callback) {
+  const key = prefix + youtubeId;
+  const maxKeys = Number(process.env.REACT_APP_STORAGE_LIMIT);
   value.updatedAt = Date.now();
 
   chrome.storage.local.get(key, (result) => {
@@ -13,10 +16,11 @@ function saveToStorage(key, value, callback) {
       });
     } else {
       chrome.storage.local.get(null, (items) => {
-        if (Object.keys(items).length >= maxKeys) {
-          let keysToDelete = Object.keys(items)
+        const filteredKeys = Object.keys(items).filter(key => key.startsWith(prefix));;
+        if (filteredKeys.length >= maxKeys) {
+          let keysToDelete = filteredKeys
             .sort((a, b) => items[a].updatedAt - items[b].updatedAt)
-            .slice(0, Object.keys(items).length - maxKeys + 1);
+            .slice(0, filteredKeys.length - maxKeys + 1);
           chrome.storage.local.remove(keysToDelete, function () {
             let newValue = {};
             newValue[key] = value;
@@ -36,16 +40,17 @@ function saveToStorage(key, value, callback) {
   });
 }
 
-function getFromStorage(key, callback) {
-  chrome.storage.local.get(key, function (result) {
+function getFromStorage(youtubeId, callback) {
+  const key = prefix + youtubeId
+  chrome.storage.local.get(key, (result) => {
     if (result[key]) {
-      saveToStorage(key, result[key]);
+      saveToStorage(youtubeId, result[key]);
     }
     callback(result[key]);
   });
 }
 
 module.exports = {
-	saveToStorage, 
-	getFromStorage
-}
+  saveToStorage,
+  getFromStorage,
+};

@@ -1,5 +1,5 @@
 /* global chrome */
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import LoaderSpinner from "./UI/LoaderSpinner";
 
 function Navbar({ selectedTab, setSelectedTag, goBack }) {
@@ -50,68 +50,12 @@ function Navbar({ selectedTab, setSelectedTag, goBack }) {
   );
 }
 
-function Wholetruth({ videoId, thesisList, riskProfile }) {
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorOnFetch, setErrorOnFetch] = useState(false);
-  const [thesisMappedList, setThesisMappedList] = useState(
-    thesisList.map((t) => {
-      return { thesis: t, wholetruth: "" };
-    })
-  );
-
-  console.log("thesisList : ", thesisList);
-  console.log("thesisMappedList1", thesisMappedList);
-
-  function fetchWholetruth(videoId, thesisList, riskProfile) {
-    setIsLoading(true);
-    setErrorOnFetch(false);
-    const apiUrl =
-      process.env.REACT_APP_API_DOMAIN +
-      "/v1/whole_truth?video_id=" +
-      encodeURIComponent(videoId) +
-      "&risk_profile=" +
-      encodeURIComponent(riskProfile);
-    fetch(apiUrl, {
-      method: "POST",
-      headers: {
-        "Content-type": "application/json",
-        "x-extension-id": chrome.runtime.id,
-      },
-      body: "",
-    })
-      .then((resp) => {
-        if (resp.ok) {
-          resp
-            .json()
-            .then((respObj) => {
-              console.log("respObj:whole_truth", respObj);
-              const wholetruths = respObj.whole_truth;
-              const mappedList = thesisList.map((t, i) => {
-                return { thesis: t, wholetruth: wholetruths[i] };
-              });
-              setThesisMappedList(mappedList);
-              console.log("thesisMappedList new: ", mappedList);
-              setIsLoading(false);
-            })
-            .catch(() => {
-              setErrorOnFetch(true);
-              setIsLoading(false);
-            });
-        } else {
-          setErrorOnFetch(true);
-          setIsLoading(false);
-        }
-      })
-      .catch(() => {
-        setErrorOnFetch(true);
-        setIsLoading(false);
-      });
-  }
-
-  useEffect(() => {
-    fetchWholetruth(videoId, thesisList, riskProfile);
-  }, [videoId, thesisList, riskProfile]);
-
+function Wholetruth({
+  thesisMappedList,
+  isLoading,
+  errorOnFetch,
+  fetchWholetruth,
+}) {
   return (
     <div className="p-6 pt-8">
       <p className="text-sm text-black text-center mb-5 italic">
@@ -135,9 +79,7 @@ function Wholetruth({ videoId, thesisList, riskProfile }) {
                 ) : errorOnFetch ? (
                   <i
                     className="text-red-600 italic cursor-pointer"
-                    onClick={() =>
-                      fetchWholetruth(videoId, thesisList, riskProfile)
-                    }
+                    onClick={fetchWholetruth}
                   >
                     Error while fetching, Click here to retry ⟳
                   </i>
@@ -167,13 +109,19 @@ function Backtest() {
   );
 }
 
-function StockSummary({ stockList }) {
-  const [selectedStock, setSelectedStock] = useState(stockList[0]);
-  const [stockSummary, setStockSummary] = useState("");
-  const [sourceList, setSourceList] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorOnFetch, setErrorOnFetch] = useState(false);
-
+function StockSummary({
+  stockList,
+  selectedStock,
+  setSelectedStock,
+  stockSummary,
+  setStockSummary,
+  sourceList,
+  setSourceList,
+  isLoading,
+  errorOnFetch,
+  setIsLoading,
+  setErrorOnFetch,
+}) {
   const handleSelectChange = (e) => {
     setSelectedStock(e.target.value);
   };
@@ -227,8 +175,7 @@ function StockSummary({ stockList }) {
   return (
     <div className="p-6 pt-8">
       <p className="text-xs text-black text-center mb-5 italic font-semibold">
-        Know What's Latest on the Stocks Mentioned in the Video with Our
-        Summarizer
+        Know What's Latest on the Stocks mentioned with our Summarizer
       </p>
       {!stockList.length ? (
         <p className="text-base text-center leading-relaxed font-semibold">
@@ -251,21 +198,22 @@ function StockSummary({ stockList }) {
             <button
               onClick={handleSummarize}
               className="p-2 bg-blue-500 text-white "
+              disabled={isLoading}
             >
               Summarize
             </button>
           </div>
 
           <div className="flex justify-center items-center mt-2">
-          {isLoading ? (
-            <LoaderSpinner mode={"PRIMARY"} size={5} />
-          ) : errorOnFetch ? (
-            <p className="text-red-600 italic text-xs text-center">
-              Error while fetching summary. Please retry
-            </p>
-          ) : (
-            ""
-          )}
+            {isLoading ? (
+              <LoaderSpinner mode={"PRIMARY"} size={5} />
+            ) : errorOnFetch ? (
+              <p className="text-red-600 italic text-xs text-center">
+                Error while fetching summary. Please retry
+              </p>
+            ) : (
+              ""
+            )}
           </div>
 
           <div style={{ display: stockSummary ? "block" : "none" }}>
@@ -297,15 +245,75 @@ function StockSummary({ stockList }) {
 
 function Analysis({ goBack, videoId, thesis, stockList, riskProfile }) {
   const [selectedTab, setSelectedTag] = useState("WHOLETRUTH"); // 'WHOLETRUTH' | 'BACKTEST' | 'STOCK_SUMMARY'
-
-  console.log(
-    "analysis component rendering",
-    goBack,
-    videoId,
-    thesis,
-    stockList,
-    riskProfile
+  const [selectedStock, setSelectedStock] = useState(stockList[0]);
+  const [stockSummary, setStockSummary] = useState("");
+  const [sourceList, setSourceList] = useState([]);
+  const [thesisMappedList, setThesisMappedList] = useState(
+    thesis.map((t) => {
+      return { thesis: t, wholetruth: "" };
+    })
   );
+  const [isLoadingWholeTruth, setIsLoadingWholeTruth] = useState(true);
+  const [errorOnFetchWholeTruth, setErrorOnFetchWholeTruth] = useState(false);
+  const [isLoadingStockSummary, setIsLoadingStockSummary] = useState(false);
+  const [errorOnFetchStockSummary, setErrorOnFetchStockSummary] =
+    useState(false);
+
+  function fetchWholetruth() {
+    setIsLoadingWholeTruth(true);
+    setErrorOnFetchWholeTruth(false);
+    const apiUrl =
+      process.env.REACT_APP_API_DOMAIN +
+      "/v1/whole_truth?video_id=" +
+      encodeURIComponent(videoId) +
+      "&risk_profile=" +
+      encodeURIComponent(riskProfile);
+    fetch(apiUrl, {
+      method: "POST",
+      headers: {
+        "Content-type": "application/json",
+        "x-extension-id": chrome.runtime.id,
+      },
+      body: "",
+    })
+      .then((resp) => {
+        if (resp.ok) {
+          resp
+            .json()
+            .then((respObj) => {
+              console.log("respObj:whole_truth", respObj);
+              const wholetruths = respObj.whole_truth;
+              const mappedList = thesisMappedList.map((t, i) => {
+                t.wholetruth = wholetruths[i];
+                return t;
+              });
+              setThesisMappedList(mappedList);
+              console.log("thesisMappedList new: ", mappedList);
+              setIsLoadingWholeTruth(false);
+            })
+            .catch(() => {
+              setErrorOnFetchWholeTruth(true);
+              setIsLoadingWholeTruth(false);
+            });
+        } else {
+          setErrorOnFetchWholeTruth(true);
+          setIsLoadingWholeTruth(false);
+        }
+      })
+      .catch(() => {
+        setErrorOnFetchWholeTruth(true);
+        setIsLoadingWholeTruth(false);
+      });
+  }
+
+  const initialFetch = useRef(true);
+
+  useEffect(() => {
+    if (initialFetch.current) {
+      fetchWholetruth(); // Call without parameters if they are not needed
+      initialFetch.current = false;
+    }
+  }, []);
 
   return (
     <div className="h-full">
@@ -317,14 +325,27 @@ function Analysis({ goBack, videoId, thesis, stockList, riskProfile }) {
       <div className="bg-white w-full overflow-y-auto">
         {selectedTab === "WHOLETRUTH" ? (
           <Wholetruth
-            thesisList={thesis}
-            videoId={videoId}
-            riskProfile={riskProfile}
+            thesisMappedList={thesisMappedList}
+            isLoading={isLoadingWholeTruth}
+            errorOnFetch={errorOnFetchWholeTruth}
+            fetchWholetruth={fetchWholetruth}
           />
         ) : selectedTab === "BACKTEST" ? (
           <Backtest />
         ) : (
-          <StockSummary stockList={stockList} />
+          <StockSummary
+            stockList={stockList}
+            selectedStock={selectedStock}
+            setSelectedStock={setSelectedStock}
+            stockSummary={stockSummary}
+            setStockSummary={setStockSummary}
+            sourceList={sourceList}
+            setSourceList={setSourceList}
+            isLoading={isLoadingStockSummary}
+            setIsLoading={setIsLoadingStockSummary}
+            errorOnFetch={errorOnFetchStockSummary}
+            setErrorOnFetch={setErrorOnFetchStockSummary}
+          />
         )}
       </div>
     </div>
