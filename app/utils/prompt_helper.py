@@ -77,7 +77,7 @@ def extract_claims_and_thesis(transcript):
                 Your first task is to identify and extract unique company names in the transcript.
                 If no company names are found, return response as None.
                 Second task is to extract claims made by the Financial Influencer in list format.
-                Third task is to generate theoretical thesis for each claim i nlist format.
+                Third task is to generate theoretical thesis for each claim in list format.
                 Report the response in JSON format with keys stock_names, claims, theoretical_analysis.
                 """
             ),
@@ -87,8 +87,9 @@ def extract_claims_and_thesis(transcript):
 
     messages = template.format_prompt(format_instructions=parser.get_format_instructions()).to_messages()
     response = chat(messages)
-    logger.info(f"Claims Extract LLM response - {response.content}")
-    return ast.literal_eval(response.content)
+    parsed_output = parser.invoke(response)
+    logger.info(f"Claims Extract LLM response - {parsed_output}")
+    return parsed_output
 
 
 def extract_whole_truth(risk_profile: str, thesis: str) -> str:
