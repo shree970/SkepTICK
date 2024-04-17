@@ -1,9 +1,10 @@
 /* global chrome */
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Welcome from "./Welcome";
 import Analysis from "./Analysis";
 import { saveToStorage, getFromStorage } from "../utilities/localStorage";
+import { generateRequestId } from "../utilities/util";
 
 async function getCurrentTabYoutubeId() {
   return new Promise((resolve, reject) => {
@@ -25,13 +26,15 @@ async function getCurrentTabYoutubeId() {
 }
 
 async function getVideoInfo(youtubeId) {
+  console.log("getVideoInfoCalled");
   return new Promise((resolve, reject) => {
     if (!youtubeId) {
-      resolve(["WELCOME", false, false, [], []]);
+      resolve([false, "WELCOME", false, false, [], []]);
     } else {
       getFromStorage(youtubeId, (result) => {
         if (result) {
           resolve([
+            false,
             result.page,
             result.isFinancial,
             result.supportedTranscript,
@@ -46,11 +49,13 @@ async function getVideoInfo(youtubeId) {
             process.env.REACT_APP_API_DOMAIN +
             "/v1/video_id?video_url=" +
             youtubeUrl;
+          console.log("Calling video_id...");
           fetch(apiUrl, {
             method: "POST",
             headers: {
               "Content-type": "application/json",
               "x-extension-id": chrome.runtime.id,
+              "x-request-id": generateRequestId(),
             },
             body: "",
           })
@@ -60,7 +65,7 @@ async function getVideoInfo(youtubeId) {
                 resp
                   .json()
                   .then((respObj) => {
-                    console.log(respObj);
+                    console.log("getVideoInfo Response", respObj);
                     const store = {
                       page: "WELCOME",
                       isFinancial: respObj.isFinancial
@@ -76,6 +81,7 @@ async function getVideoInfo(youtubeId) {
                     console.log(store);
                     saveToStorage(youtubeId, store);
                     resolve([
+                      false,
                       store.page,
                       store.isFinancial,
                       store.supportedTranscript,
@@ -83,15 +89,15 @@ async function getVideoInfo(youtubeId) {
                       store.stockList,
                     ]);
                   })
-                  .catch((err) => {
-                    resolve(["WELCOME", false, false, [], []]);
+                  .catch(() => {
+                    resolve([true, "WELCOME", false, false, [], []]);
                   });
               } else {
-                resolve(["WELCOME", false, false, [], []]);
+                resolve([true, "WELCOME", false, false, [], []]);
               }
             })
             .catch(() => {
-              resolve(["WELCOME", false, false, [], []]);
+              resolve([true, "WELCOME", false, false, [], []]);
             });
         }
       });
@@ -103,36 +109,73 @@ function Home() {
   const [currPage, setCurrPage] = useState("WELCOME");
   const [youtubeId, setYoutubeId] = useState(null); // null represents that its not youtube page
   const [infoLoading, setInfoLoading] = useState(true);
+  const [infoLoadingError, setInfoLoadingError] = useState(false);
   const [isFinancialYoutubeVideo, setIsFinancialYoutubeVideo] = useState(false);
   const [supportedTranscript, setSupportedTranscript] = useState(false);
   const [thesis, setThesis] = useState([]);
   const [stockList, setStockList] = useState([]);
   const [riskProfile, setRiskProfile] = useState("Moderate");
 
-  useEffect(() => {
-    async function fetchData() {
-      const ytId = await getCurrentTabYoutubeId();
-      console.log("ytId is", ytId);
-      setYoutubeId(ytId);
-    }
-    fetchData();
-  }, []);
+  const initialFetch = useRef(true);
 
   useEffect(() => {
-    async function fetchData() {
-      console.log("with youtube id as ", youtubeId);
-      const [page, isFinancial, transcriptSupported, thesis, stockList] =
-        await getVideoInfo(youtubeId);
-      // ['ANALYSIS', false, false, ['line 1', 'line 2', 'line3'], ['stock 1', 'stock 2', 'stock 3']] // TODO: remove this bit
-      console.log("extension id is", chrome.runtime.id);
-      setCurrPage(page);
-      setInfoLoading(false);
-      setIsFinancialYoutubeVideo(isFinancial);
-      setSupportedTranscript(transcriptSupported);
-      setThesis(thesis);
-      setStockList(stockList);
+    if (initialFetch.current) {
+      getCurrentTabYoutubeId()
+        .then((ytId) => {
+          console.log("ytId is", ytId);
+          setYoutubeId(ytId);
+        })
+        .catch(() => {
+          setInfoLoadingError(true);
+        });
     }
-    fetchData();
+  }, []);
+
+  function fetchData(youtubeId) {
+    setInfoLoadingError(false);
+    setInfoLoading(true);
+    console.log("with youtube id as ", youtubeId);
+    getVideoInfo(youtubeId)
+      .then((x) => {
+        console.log("fetchData: result1: ", x);
+        const [
+          isError,
+          page,
+          isFinancial,
+          transcriptSupported,
+          thesis,
+          stockList,
+        ] = x;
+        console.log(
+          "fetchData: result: ",
+          isError,
+          page,
+          isFinancial,
+          transcriptSupported,
+          thesis,
+          stockList
+        );
+        setInfoLoadingError(isError);
+        setCurrPage(page);
+        setInfoLoading(false);
+        setIsFinancialYoutubeVideo(isFinancial);
+        setSupportedTranscript(transcriptSupported);
+        setThesis(thesis);
+        setStockList(stockList);
+      })
+      .catch(() => {
+        setInfoLoadingError(true);
+        setCurrPage("WELCOME");
+        setInfoLoading(false);
+        setIsFinancialYoutubeVideo(false);
+        setSupportedTranscript(false);
+        setThesis([]);
+        setStockList([]);
+      });
+  }
+
+  useEffect(() => {
+    fetchData(youtubeId);
   }, [youtubeId]);
 
   const getAnalysis = (thesisList, stockList, riskProfile) => {
@@ -146,7 +189,7 @@ function Home() {
     // TODO: set page as
     getFromStorage(videoId, (result) => {
       result.page = "WELCOME";
-      saveToStorage(result);
+      saveToStorage(videoId, result);
     });
     setCurrPage("WELCOME");
   };
@@ -156,10 +199,14 @@ function Home() {
       {currPage === "WELCOME" ? (
         <Welcome
           videoId={youtubeId}
+          infoLoadingError={infoLoadingError}
           infoLoading={infoLoading}
           isFinancial={isFinancialYoutubeVideo}
           transcriptSupported={supportedTranscript}
           getAnalysis={getAnalysis}
+          fetchData={() => {
+            fetchData(youtubeId);
+          }}
         />
       ) : (
         <Analysis

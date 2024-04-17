@@ -1,6 +1,7 @@
 /* global chrome */
 import React, { useEffect, useState, useRef } from "react";
 import LoaderSpinner from "./UI/LoaderSpinner";
+import { generateRequestId } from "../utilities/util";
 
 function Navbar({ selectedTab, setSelectedTag, goBack }) {
   const tabs = [
@@ -64,10 +65,10 @@ function Wholetruth({
       <ul>
         {thesisMappedList.map(({ thesis, wholetruth }, i) => (
           <li className="mb-8">
-            <p className="font-semibold text-justify text-sm px-4 leading-relaxed">
-              <span className="text-xl">{i + 1}</span> &nbsp; {thesis}
+            <p className="font-semibold text-justify text-sm px-4">
+              <span className="text-xl leading-none">{i + 1}</span> &nbsp; {thesis}
             </p>
-            <div className="bg-primaryt space-x-4 flex items-center rounded-b p-4 leading-relaxed">
+            <div className="bg-primaryt space-x-4 flex items-center rounded-b p-4">
               <span className="flex-shrink-0 rounded-full bg-gray-100 w-5 h-5 flex items-center justify-center">
                 ❗
               </span>
@@ -134,11 +135,13 @@ function StockSummary({
       process.env.REACT_APP_API_DOMAIN +
       "/v1/stock_summary/" +
       encodeURIComponent(selectedStock);
+    console.log("Calling stock summary ...");
     fetch(apiUrl, {
       method: "POST",
       headers: {
         "Content-type": "application/json",
         "x-extension-id": chrome.runtime.id,
+        "x-request-id": generateRequestId(),
       },
       body: JSON.stringify({
         stock_name: selectedStock,
@@ -206,7 +209,7 @@ function StockSummary({
 
           <div className="flex justify-center items-center mt-2">
             {isLoading ? (
-              <LoaderSpinner mode={"PRIMARY"} size={5} />
+              <LoaderSpinner mode={"PRIMARY"} />
             ) : errorOnFetch ? (
               <p className="text-red-600 italic text-xs text-center">
                 Error while fetching summary. Please retry
@@ -268,11 +271,13 @@ function Analysis({ goBack, videoId, thesis, stockList, riskProfile }) {
       encodeURIComponent(videoId) +
       "&risk_profile=" +
       encodeURIComponent(riskProfile);
+    console.log("Calling whole truth ..");
     fetch(apiUrl, {
       method: "POST",
       headers: {
         "Content-type": "application/json",
         "x-extension-id": chrome.runtime.id,
+        "x-request-id": generateRequestId(),
       },
       body: "",
     })
@@ -313,7 +318,7 @@ function Analysis({ goBack, videoId, thesis, stockList, riskProfile }) {
       fetchWholetruth(); // Call without parameters if they are not needed
       initialFetch.current = false;
     }
-  }, []);
+  });
 
   return (
     <div className="h-full">

@@ -1,4 +1,14 @@
-# Getting Started with Create React App
+# Skeptic 
+
+Node version ^18.20.2 
+
+1. Go to `chrome-plugin/chrome-react-app`\
+2. `npm install` for first time to build \
+3. `npm run build` to make a build. \
+4. It will create a `build folder` in `chrome-plugin/chrome-react-app` 
+5. Use that build to load upacked in extension
+
+# Readme for Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
