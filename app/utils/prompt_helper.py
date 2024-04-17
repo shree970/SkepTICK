@@ -1,13 +1,14 @@
+import ast
 from langchain_community.chat_models import ChatOpenAI
-from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.prompts.chat import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
     SystemMessagePromptTemplate,
 )
 from app.utils.output_parsers import parsers
-from app.config.models import GPT4Config
+from app.config.models import GPT4Config, ThesisResponse
 from app.config.logs import MyLogger
+from langchain_core.output_parsers import JsonOutputParser
 
 
 my_logger = MyLogger()
@@ -45,7 +46,6 @@ def content_filter(title, description):
     prompt = chat_prompt.format_prompt(
         title=title, description=description
     ).to_messages()
-    logger.debug(f"Content Filter Prompt - {prompt}")
     response = chat(prompt)
     parsed_response = parsers(response.content, dtype="boolean")
     logger.debug(f"Parsed Response - {parsed_response}")
@@ -58,6 +58,7 @@ def extract_claims_and_thesis(transcript):
     :param transcript:
     :return: writes JSON files for theoretical and quantitative parts
     """
+    parser = JsonOutputParser(pydantic_object=ThesisResponse)
 
     openai_config = GPT4Config()
     chat = ChatOpenAI(
@@ -67,25 +68,28 @@ def extract_claims_and_thesis(transcript):
         request_timeout=openai_config.timeout,
     )
 
-    messages = [
-        SystemMessage(
-            content="""
-        You are a honest Financial Analyst. 
-        You are provided with a youtube video transcript of a Financial Influencer. 
-        Your first task is to identify and extract unique company names in the transcript.
-        If no company names are found, return response as None.
-        Second task is to extract claims made by the Financial Influencer and generate theoretical thesis for each claim.
-        Report the response in JSON format as mentioned below with keys stock_names, claims, theoretical_analysis.
-        
-        Output format:
-        {'stock_names': [], 'claims': ['<claim 1>', '<claim 2>'], 'theoretical_analysis': ['<thesis 1>', '<thesis 2>']}
-        """
-        ),
-        HumanMessage(content=transcript),
-    ]
+    template = ChatPromptTemplate.from_messages(
+        [
+            SystemMessagePromptTemplate.from_template(
+                """
+                You are a respectful, honest, truthful and helpful Financial Analyst. 
+                You are provided with a youtube video transcript of a Financial Influencer. 
+                Your first task is to identify and extract unique company names in the transcript.
+                If no company names are found, return response as None.
+                Second task is to extract claims made by the Financial Influencer in list format.
+                Third task is to generate theoretical thesis for each claim in list format.
+                Report the response in JSON format with keys stock_names, claims, theoretical_analysis.
+                """
+            ),
+            HumanMessagePromptTemplate.from_template(f"{transcript}"),
+        ]
+    )
+
+    messages = template.format_prompt(format_instructions=parser.get_format_instructions()).to_messages()
     response = chat(messages)
-    logger.info(f"Claims Extract LLM response - {response.content}")
-    return eval(response.content)
+    parsed_output = parser.invoke(response)
+    logger.info(f"Claims Extract LLM response - {parsed_output}")
+    return parsed_output
 
 
 def extract_whole_truth(risk_profile: str, thesis: str) -> str:
@@ -100,7 +104,7 @@ def extract_whole_truth(risk_profile: str, thesis: str) -> str:
     template = ChatPromptTemplate.from_messages(
         [
             SystemMessagePromptTemplate.from_template(
-                f"""
+                """
             You are a dedicated, honest, helpful and truthful Financial Advisor.
             Your task is to provide reliable guidance to individuals combating misinformation regarding financial matters.
             You are responding to an individual who is watching a YouTube video featuring a Financial Influencer.
@@ -118,5 +122,5 @@ def extract_whole_truth(risk_profile: str, thesis: str) -> str:
     )
 
     response = chat(template.format_messages(text=thesis, risk_profile=risk_profile))
-    logger.info(f"Whole truth LLM response - {response.content}")
+    print(f"Whole truth LLM response - {response}")
     return response.content

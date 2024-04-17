@@ -35,7 +35,8 @@ async def whole_truth(video_id: str, risk_profile: str) -> JSONResponse:
             return JSONResponse(content=response, status_code=200)
 
         counter_analysis = []
-        for thesis in fetch_db["thesis"]:
+        for i, thesis in enumerate(fetch_db["thesis"]):
+            print(f"Whole Truth - {i}")
             analysis = extract_whole_truth(risk_profile, thesis)
             counter_analysis.append(analysis)
 
