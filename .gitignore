@@ -17,8 +17,10 @@ chrome-plugin/*/coverage
 
 # production
 chrome-plugin/*/build
+chrome-plugin/build
 
 # misc
 chrome-plugin/*/npm-debug.log*
 chrome-plugin/*/yarn-debug.log*
 chrome-plugin/*/yarn-error.log*
+!chrome-plugin/*/.env
