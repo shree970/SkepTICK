@@ -122,5 +122,5 @@ def extract_whole_truth(risk_profile: str, thesis: str) -> str:
     )
 
     response = chat(template.format_messages(text=thesis, risk_profile=risk_profile))
-    logger.info(f"Whole truth LLM response - {response.content}")
+    print(f"Whole truth LLM response - {response}")
     return response.content
