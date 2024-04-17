@@ -5,7 +5,9 @@ class MyLogger:
     def __init__(self, level=logging.INFO, file_name=None):
         self.logger = logging.getLogger()
         self.logger.setLevel(level)
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(filename)s - %(lineno)d - %(message)s')
+        formatter = logging.Formatter(
+            "%(asctime)s - %(levelname)s - %(filename)s - %(lineno)d - %(message)s"
+        )
 
         # Add console handler
         console_handler = logging.StreamHandler()

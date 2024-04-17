@@ -1,32 +1,12 @@
-"""
-TODO:
-1. check for english transcript availability in youtube api
-2. Add binary classifier for only using finance videos.
-    If false, return "This video is not about finance. Please provide a finance video."
-3. Store the video claims and transcriptions in MongoDB -
-    Table User:
-    Age: int
-    Risk_profile: str
-    video_id: str
-    feedback: str/ int
-    client_information: dict
-
-    Table VideoTranscription:
-    video_id: str
-    video_link: str
-    claims: dict
-    transcript: dict
-    stock_names: list[str]
-"""
-from app.utils.crud import MongoDB
-from functools import lru_cache
-from typing import Any
-from fastapi import APIRouter, HTTPException
 from bson.objectid import ObjectId
-from app.utils.helper import transcribe
-from app.config.models import TranscribeRequest, TranscribeResponse
-from app.utils.prompt_helper import content_filter, extract_claims_and_thesis
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import JSONResponse
+from pytube import extract
+
 from app.config.logs import MyLogger
+from app.utils.crud import MongoDB
+from app.utils.helper import transcribe
+from app.utils.prompt_helper import content_filter, extract_claims_and_thesis
 
 router = APIRouter()
 my_logger = MyLogger()
@@ -34,65 +14,116 @@ logger = my_logger.get_logger()
 mongo = MongoDB()
 
 
-@lru_cache(maxsize=1)
-def cached_transcribe(video_url):
-    return transcribe(video_url)
-
-
-@router.post("/video_id/")
-async def get_video_id(request: TranscribeRequest):
+@router.post("/video_id")
+async def get_video_id(video_url: str) -> JSONResponse:
+    """
+    Checks if the Video URL is already in MongoDB
+    if_yes - return {video_id,"isFinancial":bool,"isEnglish":bool}
+    if_no - /ValidityTest
+    :param video_url: str = YouTube Video URL
+    :return: video_id
+    """
     try:
-        transcript_result = cached_transcribe(request.video_url)
-        if transcript_result.video_id is not None:
-            return transcript_result.video_id
+        video_id = extract.video_id(video_url)
+        logger.info(f"Video ID : {video_id}")
+
+        check_db = mongo.read(query={"video_id": video_id})
+        logger.info(f"Mongo DB response: {check_db}")
+        if check_db is not None:
+            response = {
+                "video_id": video_id,
+                "isFinancial": check_db.get("isFinancial", False),
+                "isEnglish": check_db.get("isEnglish", False),
+            }
+            return JSONResponse(content=response, status_code=200)
         else:
-            raise HTTPException(status_code=404, detail="Video ID not found")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+            response = await validate_url(video_url=video_url)
+            return response
+    except Exception as exp:
+        logger.error(f"An error occurred: {exp}")
+        raise HTTPException(status_code=500, detail=str(exp))
 
 
 @router.post("/ValidityTest")
-async def validate_url(request: TranscribeRequest):
-    transcript_result = cached_transcribe(request.video_url)
-    logger.info(f"Video Title: {transcript_result.title}")
-    logger.info(f"Video Description: {transcript_result.description}")
+async def validate_url(video_url: str) -> JSONResponse:
+    """
+    Extracts Title, Description, Transcript
+    Checks validity and gets results for isEnglish, isFinance from DB,
+    if both are true with transcript
+    Stores in mongo
+    :param video_url: str
+    :return: JSONResponse
+    """
+    try:
+        transcribe_response = transcribe(video_url)
+        logger.info(f"Video Title: {transcribe_response.title}")
+        logger.info(f"Video Description: {transcribe_response.description}")
+        output = content_filter(
+            transcribe_response.title, transcribe_response.description
+        )
 
-    if transcript_result.lang_code != "en":
-        response = """At present, we offer support for finance videos in English,
-        with plans to introduce additional language options in the near future."""
-        return response
+        if transcribe_response.lang_code != "en":
+            response = {"video_id": transcribe_response.video_id, "isEnglish": False}
+            return JSONResponse(content=response, status_code=200)
 
-    output = content_filter(transcript_result.title, transcript_result.description)
-    if not output:
-        response = """This video is not about finance. Please provide a finance video."""
-        return response
-    return transcript_result
+        elif not output:
+            response = {
+                "video_id": transcribe_response.video_id,
+                "isEnglish": True,
+                "isFinancial": output,
+            }
+            return JSONResponse(content=response, status_code=200)
 
-
-@router.post("/transcribe/index")
-async def check_db(video_id: str):
-    logger.info(f"Video ID : {video_id}")
-    response = mongo.read(query={"video_id": video_id})
-    logger.info(f"Mongo DB response: {response}")
-
-    if response:
-        return response
-    else:
-        return HTTPException(status_code=404, detail="Video not found in the database")
+        else:
+            store_in_db = {
+                "_id": ObjectId(),
+                "video_url": video_url,
+                "video_id": transcribe_response.video_id,
+                "isEnglish": True,
+                "isFinancial": output,
+                "title": transcribe_response.title,
+                "description": transcribe_response.description,
+                "transcript": transcribe_response.transcript,
+            }
+            mongo.create(store_in_db)
+            response = {
+                "video_id": transcribe_response.video_id,
+                "isEnglish": True,
+                "isFinancial": output,
+            }
+            return JSONResponse(content=response, status_code=200)
+    except Exception as exp:
+        logger.error(f"An error occurred: {exp}")
+        raise HTTPException(status_code=500, detail=str(exp))
 
 
 @router.post("/transcribe/breakdown")
-async def breakdown(transcript: TranscribeResponse) -> dict[str, Any]:
-    response = extract_claims_and_thesis(transcript.transcript)
+async def breakdown(video_id: str) -> JSONResponse:
+    """
+    Extracts claims, thesis and stock names for the Video
+    :param video_id: str = YouTube Video ID
+    :return: video_id, thesis, stock_names
+    """
+    try:
+        query = {"video_id": video_id}
+        fetch_document = mongo.read(query=query)
+        logger.info(f"Fetched the video metadata from MongoDB: {fetch_document}")
+        output = extract_claims_and_thesis(fetch_document.get("transcript"))
 
-    breakdown_results = {
-        "_id": str(ObjectId()),
-        "video_id": transcript.video_id,
-        "transcript": transcript.transcript,
-        "stock_names": response["stock_names"],
-        "claims": response["claims"],
-        "thesis": response["theoretical_analysis"],
-    }
-    mongo.create(breakdown_results)
+        extract_response = {
+            "stock_names": output["stock_names"],
+            "claims": output["claims"],
+            "thesis": output["theoretical_analysis"],
+        }
+        mongo.update(query=query, new_data=extract_response)
 
-    return breakdown_results
+        response = {
+            "video_id": video_id,
+            "thesis": extract_response["thesis"],
+            "stock_names": extract_response["stock_names"],
+        }
+        return JSONResponse(content=response, status_code=200)
+
+    except Exception as exp:
+        logger.error(f"An error occurred: {exp}")
+        raise HTTPException(status_code=500, detail=str(exp))

@@ -5,7 +5,6 @@ from fastapi.responses import JSONResponse
 
 from app.api.root import root_router
 from app.api.v1.api import v1_router
-from app.config.models import RegisterRequest
 
 
 app = FastAPI()
@@ -22,12 +21,6 @@ app.add_middleware(
 )
 
 
-@app.post("/register")
-async def register(registerRequest: RegisterRequest):
-    print(registerRequest)
-    return registerRequest
-
-
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     exc_str = f"{exc}".replace("\n", " ").replace("   ", " ")
@@ -37,6 +30,8 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         content=content, status_code=status.HTTP_422_UNPROCESSABLE_ENTITY
     )
 
+
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0")
