@@ -60,7 +60,7 @@ def generate_summary_openai(
     text_splitter = CharacterTextSplitter()
     texts = text_splitter.split_text(txt)
     docs = [Document(page_content=t) for t in texts]
-    system_prompt_template = """You are a financial analyst. Your job is to summarize given news articles for given stock. If numerical figures are present in news, comment on those as well. Return output string having details stock summary. Stock for which to generate summary is: {stock_name}."""
+    system_prompt_template = """You are a financial analyst. Your job is to summarize given news articles for given stock. If numerical figures are present in news, comment on those as well. Return output string having details stock summary. GIve at least 200 words summary. Stock for which to generate summary is: {stock_name}."""
     prompt = PromptTemplate.from_template(system_prompt_template)
     chain = load_summarize_chain(
         llm, chain_type="stuff", prompt=prompt, document_variable_name="stock_name"
@@ -78,7 +78,15 @@ def get_bing_result(stock_name, no_news) -> list:
     try:
         logger.info(f"stock_summary api: Getting bing results for : {stock_name}")
         search = BingSearchAPIWrapper()
-        bing_result = search.results(f"{stock_name} stock", no_news)
+        # bing_result = search.results(
+        #     f"{stock_name} stock",
+        #     no_news,
+        # )
+
+        bing_result = search.results(
+            f"{stock_name} company profile - recent-events",
+            no_news,
+        )
     except Exception as e:
         logger.error(f"stock_summary api: Error while fetching bing results: {e}")
     return bing_result
