@@ -107,16 +107,17 @@ async def breakdown(video_id: str) -> JSONResponse:
     try:
         query = {"video_id": video_id}
         fetch_document = mongo.read(query=query)
-        logger.info(f"Fetched the video metadata from MongoDB: {fetch_document}")
+        logger.info("Fetched the video metadata from MongoDB")
         output = extract_claims_and_thesis(fetch_document.get("transcript"))
 
+        logger.info(f"Output: {type(output)}")
         extract_response = {
             "stock_names": output["stock_names"],
             "claims": output["claims"],
             "thesis": output["theoretical_analysis"],
         }
         mongo.update(query=query, new_data=extract_response)
-
+        logger.info(f"Updated Mongo DB with thesis and claims")
         response = {
             "video_id": video_id,
             "thesis": extract_response["thesis"],

@@ -14,8 +14,14 @@ class MongoClient(BaseModel):
 class GPT4Config(BaseModel):
     model_name: str = Field(default="gpt-3.5-turbo")
     temperature: float = Field(default=0.25)
-    max_tokens: int = Field(default=512)
+    max_tokens: int = Field(default=1000)
     timeout: int = Field(default=120)
+
+
+class ThesisResponse(BaseModel):
+    stock_names: list[str] = Field(description="stock names extracted from transcript")
+    claims: list[str] = Field(description="claims extracted from the transcript")
+    theoretical_analysis: list[str] = Field(description="thesis generated from claims")
 
 
 class TranscribeResponse(BaseModel):
