@@ -1,18 +1,27 @@
 /* global chrome */
 
-import React, { useState } from "react";
-import { getFromStorage, saveToStorage } from "../utilities/localStorage";
+import React, { useEffect, useState, useRef } from "react";
+import {
+  getFromStorage,
+  saveToStorage,
+  getConfigFromStorage,
+  saveConfigToStorage,
+} from "../utilities/localStorage";
 import LoaderSpinner from "./UI/LoaderSpinner";
+import { generateRequestId } from "../utilities/util";
 
 function Welcome({
   videoId,
+  infoLoadingError,
   infoLoading,
   isFinancial,
   transcriptSupported,
   getAnalysis,
 }) {
   console.log(
+    "Welcome rendered:",
     videoId,
+    infoLoadingError,
     infoLoading,
     isFinancial,
     transcriptSupported,
@@ -34,6 +43,7 @@ function Welcome({
         ) : (
           <YoutubeBanner
             videoId={videoId}
+            infoLoadingError={infoLoadingError}
             infoLoading={infoLoading}
             isFinancial={isFinancial}
             transcriptSupported={transcriptSupported}
@@ -45,26 +55,54 @@ function Welcome({
   );
 }
 
-function MessageBanner({ message1, message2 }) {
+function MessageBanner({
+  message1,
+  message2,
+  error = false,
+  errorRetry = null,
+}) {
   return (
     <div>
       <p className="font-bold mt-8 text-sm">{message1}</p>
-      <p className="text-base mt-1">{message2}</p>
+      <p
+        className={`text-base mt-1 ${error ? "text-red-600" : "text-gray-950"}`}
+      >
+        {message2}
+      </p>
+      {error ? (
+        <button
+          className="text-sm mt-2 text-red-600 rounded-sm"
+          onClick={errorRetry}
+        >
+          ↻ Refresh
+        </button>
+      ) : (
+        ""
+      )}
     </div>
   );
 }
 
 function YoutubeBanner({
   videoId,
+  infoLoadingError,
   infoLoading,
   isFinancial,
   transcriptSupported,
   getAnalysis,
+  fetchData,
 }) {
   return (
     <div className="w-full">
-      {infoLoading ? (
-        <LoaderSpinner />
+      {infoLoadingError ? (
+        <MessageBanner
+          message1={""}
+          message2={"Error loading info about the video."}
+          error={true}
+          errorRetry={fetchData}
+        />
+      ) : infoLoading ? (
+        <LoaderSpinner mode="PRIMARY" size="8" />
       ) : !isFinancial ? (
         <MessageBanner
           message1={"This video is not recognised as a Financial video"}
@@ -117,6 +155,20 @@ function GetAnalysisBanner({ videoId, getAnalysis }) {
   const [sliderVal, setSliderVal] = useState(3);
   const [errorOnFetch, setErrorOnFetch] = useState(false);
 
+  const initialFetch = useRef(true);
+
+  useEffect(() => {
+    if (initialFetch.current) {
+      console.log("use effect slider called", sliderVal);
+      getConfigFromStorage("riskProfile", (val) => {
+        if (val) {
+          setSliderVal(val);
+        }
+      });
+      initialFetch.current = false;
+    }
+  });
+
   function handleSliderChange(event) {
     setSliderVal(event.target.value);
   }
@@ -130,7 +182,7 @@ function GetAnalysisBanner({ videoId, getAnalysis }) {
           type="range"
           min="1"
           max="5"
-          defaultValue={sliderVal}
+          value={sliderVal}
           onChange={handleSliderChange}
           step="1"
           className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
@@ -187,6 +239,7 @@ function fetchThesis(
   sliderVal
 ) {
   const riskProfile = getRiskProfileText(sliderVal);
+  saveConfigToStorage("riskProfile", sliderVal);
   setIsLoading(true);
   setErrorOnFetch(false);
   getFromStorage(videoId, (result) => {
@@ -200,11 +253,13 @@ function fetchThesis(
         process.env.REACT_APP_API_DOMAIN +
         "/v1/transcribe/breakdown?video_id=" +
         encodeURIComponent(videoId);
+      console.log("Calling transcribe...");
       fetch(apiUrl, {
         method: "POST",
         headers: {
           "Content-type": "application/json",
           "x-extension-id": chrome.runtime.id,
+          "x-request-id": generateRequestId(),
         },
         body: "",
       })

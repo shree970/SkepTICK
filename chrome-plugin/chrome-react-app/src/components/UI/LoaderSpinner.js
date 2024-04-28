@@ -1,11 +1,11 @@
-function LoaderSpinner({ mode = "PRIMARY", size = 8 }) {
+function LoaderSpinner({ mode = "PRIMARY" }) {
   const spinnerFill = mode === "PRIMARY" ? "#97d7cc" : "#ffffff";
   return (
     <div>
-      <div role="status">
+      <div role="status" className="flex justify-center items-center">
         <svg
           ariaHidden="true"
-          className={`w-${size} h-${size} text-gray-100 animate-spin`}
+          className="h-5 text-gray-100 animate-spin"
           viewBox="0 0 100 101"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
