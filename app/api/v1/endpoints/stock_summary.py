@@ -161,7 +161,7 @@ async def get_stock_news(request: SummarizerRequest) -> JSONResponse:
     stock_name = request.stock_name
     try:
         # Getting Bing search results
-        bing_result = get_bing_result(stock_name, no_news=10)
+        bing_result = get_bing_result(stock_name, no_news=7)
         if len(bing_result) == 0:
             raise HTTPException(
                 status_code=400, detail="Stock summary not available for selected stock"
