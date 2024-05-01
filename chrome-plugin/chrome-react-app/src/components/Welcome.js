@@ -103,19 +103,19 @@ function YoutubeBanner({
         />
       ) : infoLoading ? (
         <LoaderSpinner mode="PRIMARY" size="8" />
-      ) : !isFinancial ? (
-        <MessageBanner
-          message1={"This video is not recognised as a Financial video"}
-          message2={"Open a financial video to get its analysis"}
-        />
-      ) : !transcriptSupported ? (
+      ) :!transcriptSupported ? (
         <MessageBanner
           message1={"Sorry! English transcript for this video is not available"}
           message2={
             "We're working on multi-language support. Keep looking for the updates."
           }
         />
-      ) : (
+      ) :!isFinancial ? (
+        <MessageBanner
+          message1={"This video is not recognised as a Financial video"}
+          message2={"Open a financial video to get its analysis"}
+        />
+      )   : (
         <GetAnalysisBanner videoId={videoId} getAnalysis={getAnalysis} />
       )}
     </div>
