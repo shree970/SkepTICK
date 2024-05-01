@@ -76,9 +76,8 @@ def extract_claims_and_thesis(transcript):
                 You are provided with a youtube video transcript of a Financial Influencer. 
                 Your first task is to identify and extract unique company names in the transcript.
                 If no company names are found, return response as None.
-                Second task is to extract claims made by the Financial Influencer in list format.
-                Third task is to generate theoretical thesis for each claim in list format.
-                Report the response in JSON format with keys stock_names, claims, theoretical_analysis.
+                Second task is to extract the financial investment advise made by the Financial Influencer in list format.
+                Report the response in JSON format with keys stock_names, thesis
                 """
             ),
             HumanMessagePromptTemplate.from_template(f"{transcript}"),

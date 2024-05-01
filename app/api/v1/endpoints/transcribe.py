@@ -113,8 +113,7 @@ async def breakdown(video_id: str) -> JSONResponse:
         logger.info(f"Output: {type(output)}")
         extract_response = {
             "stock_names": output["stock_names"],
-            "claims": output["claims"],
-            "thesis": output["theoretical_analysis"],
+            "thesis": output["thesis"],
         }
         mongo.update(query=query, new_data=extract_response)
         logger.info(f"Updated Mongo DB with thesis and claims")
