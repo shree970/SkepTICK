@@ -13,6 +13,9 @@ import concurrent.futures
 import re
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
+from cachetools import cached, TTLCache
+from hashlib import sha256
+from typing import Tuple
 
 from dotenv import load_dotenv
 
@@ -49,6 +52,15 @@ class SummarizerInput(BaseModel):
     system_prompt: Optional[str] = None
 
 
+def hash_request(txt, stock_name) -> Tuple:
+    # Extract hashable attributes from the request and combine them into a tuple
+    hashable_attributes = stock_name
+    # Convert the tuple into a hashable representation using SHA-256
+    print("hashing completed")
+    return sha256(str(hashable_attributes).encode()).hexdigest()
+
+
+@cached(cache=TTLCache(maxsize=512, ttl=6000), key=hash_request)
 def generate_summary_openai(
     txt: str, stock_name: str, temperature: float = 0.2
 ) -> SummarizerOutput:
@@ -72,6 +84,10 @@ def generate_summary_openai(
     return output
 
 
+bing_cache = TTLCache(maxsize=512, ttl=6000)
+
+
+@cached(cache=bing_cache)
 def get_bing_result(stock_name, no_news) -> list:
     """Get Bing search results"""
     bing_result = []
@@ -92,6 +108,7 @@ def get_bing_result(stock_name, no_news) -> list:
     return bing_result
 
 
+@cached(cache=TTLCache(maxsize=512, ttl=6000))
 def scrap_webpage(web_url) -> str:
     """Scrape webpage content"""
     logger.info(f"stock_summary api: scraping webpage: {web_url}")
@@ -162,6 +179,9 @@ async def get_stock_news(request: SummarizerRequest) -> JSONResponse:
     try:
         # Getting Bing search results
         bing_result = get_bing_result(stock_name, no_news=7)
+
+        # bing_result in bing_cache.values()
+
         if len(bing_result) == 0:
             raise HTTPException(
                 status_code=400, detail="Stock summary not available for selected stock"
@@ -174,7 +194,9 @@ async def get_stock_news(request: SummarizerRequest) -> JSONResponse:
             raise HTTPException(
                 status_code=400, detail="Stock summary not available for selected stock"
             )
-
+        # sending just 8k characters
+        if len(stock_news_all) > 8000:
+            stock_news_all = stock_news_all[:8000]
         # Generating summary using OpenAI
         summarized_content = generate_summary_openai(
             txt=stock_news_all, stock_name=stock_name
