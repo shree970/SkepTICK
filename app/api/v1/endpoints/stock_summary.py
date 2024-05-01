@@ -13,7 +13,7 @@ import concurrent.futures
 import re
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
-
+from app.config.models import GPT4Config
 from dotenv import load_dotenv
 
 from app.config.logs import MyLogger

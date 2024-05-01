@@ -12,7 +12,7 @@ class MongoClient(BaseModel):
 
 
 class GPT4Config(BaseModel):
-    model_name: str = Field(default="gpt-4-turbo")
+    model_name: str = Field(default="gpt-4")
     temperature: float = Field(default=0.25)
     max_tokens: int = Field(default=1000)
     timeout: int = Field(default=120)
