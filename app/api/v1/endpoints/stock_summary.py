@@ -179,6 +179,7 @@ async def get_stock_news(request: SummarizerRequest) -> JSONResponse:
     try:
         # Getting Bing search results
         bing_result = get_bing_result(stock_name, no_news=7)
+
         # bing_result in bing_cache.values()
 
         if len(bing_result) == 0:

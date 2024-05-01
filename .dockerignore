@@ -1,0 +1,17 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+.git
+.gitignore
+.dockerignore
+*.md
+LICENSE
+data/
+notebooks/
+KG/
+chrome-plugin/
+*.log
+node_modules/
+frontend/
