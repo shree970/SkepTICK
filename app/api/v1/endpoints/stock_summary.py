@@ -68,7 +68,7 @@ def generate_summary_openai(
     # summary = f"Unable to fetch summary for: {stock_name}"
     # try:
     logger.info(f"stock_summary api: Summarizing news for : {stock_name}")
-    llm = ChatOpenAI(temperature=temperature, model_name="gpt-4-turbo", request_timeout=60)
+    llm = ChatOpenAI(temperature=temperature, model_name="gpt-3.5-turbo", request_timeout=60)
     text_splitter = CharacterTextSplitter()
     texts = text_splitter.split_text(txt)
     docs = [Document(page_content=t) for t in texts]
